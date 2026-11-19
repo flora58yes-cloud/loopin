@@ -1,0 +1,482 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoopIn — Profil Pengguna &amp; Lacak Paket</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Playfair Display & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Konfigurasi Warna & Font Seragam dengan Landing Page & auth.html -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage: {
+              DEFAULT: '#7A8E78',
+              hover: '#687A66',
+              light: '#EBF0EA',
+              dark: '#3F4F3E'
+            },
+            charcoal: {
+              DEFAULT: '#232822',
+              hover: '#191D18',
+              muted: '#5C625A'
+            },
+            oatmeal: '#F7F5F0',
+            taupe: '#E5E0D8',
+            amber: {
+              DEFAULT: '#D4A373',
+              hover: '#C29161',
+              light: '#F7EFE6'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Stylesheet Terpisah -->
+  <link rel="stylesheet" href="assets/css/profile-tracking.css" />
+</head>
+<body class="bg-oatmeal text-charcoal font-sans min-h-screen flex flex-col justify-between antialiased selection:bg-sage selection:text-white">
+
+  <!-- AUTH GUARD -->
+  <script>
+    (function() {
+      const user = JSON.parse(localStorage.getItem('loopin_user') || 'null');
+      if (!user) window.location.href = 'auth.html?redirect=profile-tracking.html';
+    })();
+  </script>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-sm px-4"></div>
+
+  <!-- HEADER UTAMA (Seragam dengan auth.html & Landing Page) -->
+  <header class="bg-sage text-white sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20 gap-3">
+        
+        <!-- Brand Group & Back Button -->
+        <div class="flex items-center gap-3">
+          <a href="index.html#katalog" class="p-1.5 text-white hover:opacity-80 transition-opacity flex items-center justify-center rounded-xl hover:bg-white/10" title="Kembali ke Katalog Utama" aria-label="Kembali ke Katalog">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </a>
+
+          <a href="index.html" class="flex items-center gap-2.5 group">
+            <!-- Logo LoopIn: Otomatis mendeteksi 1.png atau 1.jpg (latar hitam dihilangkan otomatis) -->
+            <div class="relative flex items-center justify-center">
+              <img
+                id="header-brand-logo-img"
+                src="assets/images/branding/logo.png"
+                data-fallbacks="assets/images/branding/logo.png,assets/images/branding/logo-horizontal.png"
+                alt="LoopIn Logo"
+                class="h-10 w-auto object-contain rounded-lg"
+                onload="handleLogoLoaded(this)"
+                onerror="tryNextImageSource(this, () => { this.style.display='none'; document.getElementById('header-brand-logo-svg').classList.remove('hidden'); })"
+              />
+              <svg id="header-brand-logo-svg" class="hidden h-9 w-11 text-white shrink-0" viewBox="0 0 120 98" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M51 31C51 20.5 67 20.5 67 31C67 36.2 63.2 40 59.5 43.2L68.5 51.8" stroke="#FFFFFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M47 72.5C41.8 77.2 33.8 78.6 26.8 75.5C17.2 71.2 13.5 59.5 18.2 50.2C22.9 40.9 34.8 37.8 44 43.5C47.5 45.7 51.2 49.4 55 53.2L64.2 62.2" stroke="#D9E2D7" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M68.5 51.8C73.8 46.2 82.2 44.5 89.8 47.8C99.5 52 103.5 63.8 98.8 73.2C94.1 82.6 82.2 85.8 72.8 80.2C69.2 78.1 65.5 74.2 61.5 70.2L51.5 60.4" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <span class="font-serif text-2xl font-bold tracking-tight block leading-none">LoopIn</span>
+              <span class="text-[10px] text-white/85 tracking-wide hidden sm:block mt-0.5">Give it another loop.</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- Navigasi Halaman: Profil vs Lacak Paket -->
+        <nav class="flex items-center bg-charcoal/20 p-1 rounded-2xl border border-white/15" aria-label="Navigasi Akun">
+          <button id="nav-profile" onclick="switchPage('profile')" class="px-3.5 sm:px-5 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all bg-white text-charcoal shadow-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>Profil Saya</span>
+            <span id="nav-fav-badge" class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-sage-light text-sage-dark tabular-nums">3</span>
+          </button>
+
+          <button id="nav-tracking" onclick="switchPage('tracking')" class="px-3.5 sm:px-5 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all text-white/85 hover:text-white flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span>Lacak Paket</span>
+            <span class="w-2 h-2 rounded-full bg-amber animate-pulse"></span>
+          </button>
+        </nav>
+
+        <!-- Unduh Logo PNG Transparan -->
+        <div class="hidden md:flex items-center gap-3">
+          <button onclick="downloadTransparentLoopInLogo()" class="text-xs font-medium bg-white/15 hover:bg-white/25 text-white px-3.5 py-2 rounded-xl border border-white/20 transition-all flex items-center gap-1.5" title="Simpan Logo LoopIn Transparan (.png)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Logo PNG</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- HALAMAN 1: PROFIL PENGGUNA & BARANG DISUKAI (FAVORITES)               -->
+  <!-- ===================================================================== -->
+  <main id="page-profile" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
+    
+    <!-- Banner Sambutan & Ringkasan Profil -->
+    <section class="bg-white rounded-3xl border border-taupe shadow-sm overflow-hidden">
+      <div class="bg-sage px-6 sm:px-8 py-6 text-white relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-charcoal/20 border border-white/15 text-[11px] font-medium tracking-wide">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber"></span>
+              Verified Circular Curator
+            </span>
+            <h1 class="font-serif text-2xl sm:text-3xl font-bold mt-2 tracking-tight">Ruang Kurasi &amp; Profil Anggota</h1>
+            <p class="text-xs sm:text-sm text-white/85 mt-1 font-light">Kelola identitas akun, alamat pengiriman, serta koleksi pakaian preloved yang kamu sukai.</p>
+          </div>
+          <div class="flex items-center gap-2.5 self-start sm:self-center">
+            <button onclick="openEditProfileModal()" class="px-4 py-2.5 bg-white text-charcoal hover:bg-oatmeal text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span>Edit Profil &amp; Alamat</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid Identitas Pengguna + Metrik Dampak Sirkular -->
+      <div class="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div class="lg:col-span-6 flex items-start sm:items-center gap-4 sm:gap-5">
+          <!-- Foto Profil: Otomatis memuat Foto Flora.jpg jika ada di folder, jika tidak pakai inisial FJ -->
+          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-sage-light border-2 border-sage/30 flex items-center justify-center shrink-0 text-sage-dark font-serif text-2xl sm:text-3xl font-bold shadow-inner overflow-hidden">
+            <img src="assets/images/branding/avatar-flora.jpg" alt="Flora Jasmine" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" />
+            <span class="hidden">FJ</span>
+          </div>
+          <div class="space-y-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 id="profile-name" class="font-serif text-xl sm:text-2xl font-bold text-charcoal">Flora Jasmine</h2>
+              <span class="px-2.5 py-0.5 text-[11px] font-semibold bg-amber-light text-charcoal rounded-full border border-amber/30">LoopMember</span>
+            </div>
+            <p id="profile-handle" class="text-xs text-charcoal-muted font-medium">@florajasmine • Bergabung sejak Agustus 2026</p>
+            <p id="profile-bio" class="text-xs sm:text-sm text-charcoal/80 leading-relaxed pt-1">
+              Menyukai siluet klasik berbahan katun, rajut lembut, dan earth-tone preloved yang siap diberi siklus hidup kedua.
+            </p>
+          </div>
+        </div>
+
+        <!-- 3 Kartu Metrik -->
+        <div class="lg:col-span-6 grid grid-cols-3 gap-3 sm:gap-4">
+          <div class="bg-oatmeal border border-taupe rounded-2xl p-3.5 sm:p-4 text-center sm:text-left">
+            <p class="text-[11px] font-medium text-charcoal-muted">Barang Disukai</p>
+            <p id="stat-fav-count" class="font-serif text-2xl sm:text-3xl font-bold text-charcoal mt-1 tabular-nums">3</p>
+            <p class="text-[10px] text-sage-dark font-medium mt-1">Tersimpan di Favorit</p>
+          </div>
+
+          <div class="bg-oatmeal border border-taupe rounded-2xl p-3.5 sm:p-4 text-center sm:text-left">
+            <p class="text-[11px] font-medium text-charcoal-muted">Jejak Emisi Hemat</p>
+            <p class="font-serif text-2xl sm:text-3xl font-bold text-sage-dark mt-1 tabular-nums">18.4 <span class="text-xs font-sans font-semibold">kg</span></p>
+            <p class="text-[10px] text-charcoal-muted mt-1">CO₂e dari 4 transaksi</p>
+          </div>
+
+          <div class="bg-oatmeal border border-taupe rounded-2xl p-3.5 sm:p-4 text-center sm:text-left cursor-pointer hover:border-sage transition-colors" onclick="switchPage('tracking')">
+            <p class="text-[11px] font-medium text-charcoal-muted">Paket Aktif</p>
+            <p class="font-serif text-2xl sm:text-3xl font-bold text-amber mt-1 tabular-nums">2</p>
+            <p class="text-[10px] text-charcoal font-semibold underline underline-offset-2 mt-1">Lacak sekarang →</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Baris Detail Alamat & Kontak -->
+      <div class="px-6 sm:px-8 py-4 bg-oatmeal/70 border-t border-taupe flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        <div class="flex items-start sm:items-center gap-2.5 text-charcoal/85">
+          <svg class="w-4 h-4 text-sage shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span><strong class="font-semibold text-charcoal">Alamat Utama:</strong> <span id="profile-address">Jl. Ketintang Baru Selatan No. 14, Gayungan, Surabaya, Jawa Timur 60231</span></span>
+        </div>
+        <div class="flex flex-wrap items-center gap-4 text-charcoal-muted">
+          <span id="profile-email">flora.jasmine@unesa.ac.id</span>
+          <span>•</span>
+          <span id="profile-phone">+62 813-5125-3755</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- BAGIAN FAVORITE (BARANG YANG DI-LIKE MUNCUL OTOMATIS DI SINI)       -->
+    <!-- =================================================================== -->
+    <section class="bg-white rounded-3xl border border-taupe shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-taupe pb-5">
+        <div>
+          <div class="inline-flex items-center gap-2 text-xs font-semibold text-sage uppercase tracking-wider">
+            <svg class="w-4 h-4 fill-sage text-sage" viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
+            <span>Koleksi Tersimpan</span>
+          </div>
+          <h2 class="font-serif text-2xl sm:text-3xl font-bold text-charcoal mt-1">Barang Disukai (Favorites)</h2>
+          <p class="text-xs sm:text-sm text-charcoal-muted mt-1">Setiap produk yang kamu tekan ikon hati (♥) pada katalog LoopIn otomatis tersimpan di rak favorit ini.</p>
+        </div>
+
+        <!-- Filter Kategori Favorit -->
+        <div class="flex flex-wrap items-center gap-2" id="fav-filter-group">
+          <button onclick="setFavCategory('Semua')" data-cat="Semua" class="fav-cat-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-charcoal text-white transition-all">Semua</button>
+          <button onclick="setFavCategory('Atasan')" data-cat="Atasan" class="fav-cat-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-oatmeal text-charcoal hover:bg-taupe/70 border border-taupe transition-all">Atasan &amp; Blus</button>
+          <button onclick="setFavCategory('Rajut')" data-cat="Rajut" class="fav-cat-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-oatmeal text-charcoal hover:bg-taupe/70 border border-taupe transition-all">Knitwear &amp; Cardigan</button>
+          <button onclick="setFavCategory('Bawahan')" data-cat="Bawahan" class="fav-cat-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-oatmeal text-charcoal hover:bg-taupe/70 border border-taupe transition-all">Rok &amp; Bawahan</button>
+        </div>
+      </div>
+
+      <!-- Grid Daftar Barang Disukai -->
+      <div id="favorites-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+      <!-- Empty State jika tidak ada barang di-like -->
+      <div id="favorites-empty" class="hidden text-center py-12 px-4 bg-oatmeal rounded-2xl border border-dashed border-taupe">
+        <div class="w-12 h-12 rounded-2xl bg-sage-light text-sage mx-auto flex items-center justify-center mb-3">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </div>
+        <h3 class="font-serif text-lg font-bold text-charcoal">Belum ada item di kategori ini</h3>
+        <p class="text-xs text-charcoal-muted max-w-md mx-auto mt-1">Klik ikon hati (♥) pada rak kurasi katalog di bawah ini untuk menambahkan pakaian favoritmu.</p>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- RAK KURASI KATALOG LOOPIN (SIMULASI TOMBOL LIKE / UNLIKE)           -->
+    <!-- =================================================================== -->
+    <section class="bg-white rounded-3xl border border-taupe shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-taupe pb-5">
+        <div>
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-amber">Simulasi Interaksi Like</span>
+          <h2 class="font-serif text-xl sm:text-2xl font-bold text-charcoal mt-0.5">Jelajahi Kurasi Terbaru LoopIn</h2>
+          <p class="text-xs text-charcoal-muted mt-1">Tekan tombol hati pada kartu produk untuk menambahkan atau menghapusnya dari daftar <strong>Barang Disukai</strong> di atas.</p>
+        </div>
+        <span class="text-xs font-medium text-sage-dark bg-sage-light px-3 py-1.5 rounded-full self-start sm:self-center">7 Koleksi Kurasi Tersedia</span>
+      </div>
+
+      <div id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+    </section>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- HALAMAN 2: STATUS & LACAK PAKET (PACKAGE TRACKING)                    -->
+  <!-- ===================================================================== -->
+  <main id="page-tracking" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
+    
+    <!-- Header Pencarian Resi & Pemilih Paket -->
+    <section class="bg-white rounded-3xl border border-taupe shadow-sm overflow-hidden">
+      <div class="bg-sage px-6 sm:px-8 py-6 text-white relative overflow-hidden">
+        <div class="absolute -right-8 -bottom-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
+          <div>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-charcoal/20 border border-white/15 text-[11px] font-medium">
+              Eco-Packaging &amp; Live Courier Sync
+            </span>
+            <h1 class="font-serif text-2xl sm:text-3xl font-bold mt-2 tracking-tight">Status &amp; Pelacakan Paket</h1>
+            <p class="text-xs sm:text-sm text-white/85 mt-1 font-light">Pantau perjalanan paket thrift terkurasi kamu dari proses sanitasi hingga tiba di depan pintu.</p>
+          </div>
+
+          <!-- Form Cari Nomor Resi -->
+          <form onsubmit="handleSearchResi(event)" class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+            <div class="relative flex-1 sm:w-64">
+              <input type="text" id="resi-search-input" placeholder="Contoh: LPN-2026-0842" class="w-full pl-4 pr-3 py-2.5 text-xs sm:text-sm bg-white text-charcoal rounded-xl border border-white/30 focus:outline-none focus:ring-2 focus:ring-amber font-medium placeholder:text-charcoal-muted/70" />
+            </div>
+            <button type="submit" class="px-5 py-2.5 bg-charcoal hover:bg-charcoal-hover text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span>Lacak Resi</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab Pilihan Paket Pengguna -->
+      <div class="p-4 sm:px-8 sm:py-5 bg-oatmeal/70 border-b border-taupe flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2" id="shipment-selector-group"></div>
+        <button onclick="simulateNextShipmentStep()" class="px-4 py-2 bg-amber hover:bg-amber-hover text-white text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-1.5 self-start sm:self-center">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Simulasi Update Kurir</span>
+        </button>
+      </div>
+
+      <!-- Ringkasan Status & Stepper 4 Tahap -->
+      <div class="p-6 sm:p-8 space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-taupe">
+          <div class="space-y-1">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <span class="text-xs font-semibold uppercase tracking-wider text-charcoal-muted">Nomor Resi:</span>
+              <span id="track-resi-code" class="font-mono text-sm sm:text-base font-bold text-charcoal bg-oatmeal px-3 py-1 rounded-lg border border-taupe tabular-nums">LPN-2026-0842</span>
+              <button onclick="copyResiCode()" class="text-xs font-semibold text-sage hover:underline flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span>Salin</span>
+              </button>
+            </div>
+            <p id="track-courier-info" class="text-xs text-charcoal-muted pt-1">Kurir: <strong class="text-charcoal">SiCepat Green Eco</strong> • Dikirim dari LoopIn Hub Bandung</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="bg-oatmeal border border-taupe rounded-2xl px-4 py-2.5">
+              <p class="text-[10px] uppercase tracking-wider text-charcoal-muted font-semibold">Estimasi Tiba</p>
+              <p id="track-eta" class="text-xs sm:text-sm font-bold text-charcoal mt-0.5">Hari ini, 14:00 – 17:00 WIB</p>
+            </div>
+            <span id="track-status-pill" class="px-4 py-2 rounded-2xl text-xs font-bold bg-amber-light text-charcoal border border-amber/40">
+              Dalam Pengantaran Kurir
+            </span>
+          </div>
+        </div>
+
+        <!-- Visual 4-Stage Milestone Stepper -->
+        <div id="tracking-stepper" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- Grid Bawah: Riwayat Perjalanan Paket (Kiri) + Rincian Isi & Kemasan LoopIn (Kanan) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Kolom Kiri: Timeline Log Transit -->
+      <section class="lg:col-span-7 bg-white rounded-3xl border border-taupe shadow-sm p-6 sm:p-8 space-y-6">
+        <div class="flex items-center justify-between border-b border-taupe pb-4">
+          <div>
+            <h2 class="font-serif text-xl sm:text-2xl font-bold text-charcoal">Riwayat Perjalanan Paket</h2>
+            <p class="text-xs text-charcoal-muted mt-0.5">Pembaruan titik transit dan pemeriksaan kualitas LoopIn</p>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-sage-light text-sage-dark text-[11px] font-semibold">Real-Time Log</span>
+        </div>
+
+        <div id="tracking-timeline" class="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-taupe"></div>
+      </section>
+
+      <!-- Kolom Kanan: Rincian Item & Eco-Packaging -->
+      <aside class="lg:col-span-5 space-y-6">
+        <!-- Kartu Rincian Produk dalam Paket -->
+        <div class="bg-white rounded-3xl border border-taupe shadow-sm p-6 sm:p-7 space-y-5">
+          <div class="flex items-center justify-between border-b border-taupe pb-4">
+            <h2 class="font-serif text-xl font-bold text-charcoal">Rincian Item Paket</h2>
+            <span id="track-item-count" class="text-xs font-semibold text-charcoal-muted">2 Item</span>
+          </div>
+
+          <div id="track-items-list" class="space-y-4"></div>
+
+          <div class="pt-4 border-t border-taupe space-y-2 text-xs">
+            <div class="flex justify-between text-charcoal-muted">
+              <span>Subtotal Kurasi</span>
+              <span id="track-subtotal" class="font-semibold text-charcoal tabular-nums">Rp 264.000</span>
+            </div>
+            <div class="flex justify-between text-charcoal-muted">
+              <span>Pengiriman Karbon-Netral</span>
+              <span class="font-semibold text-sage-dark tabular-nums">Rp 12.000</span>
+            </div>
+            <div class="flex justify-between text-sm font-bold text-charcoal pt-2 border-t border-taupe/60">
+              <span>Total Pembayaran</span>
+              <span id="track-total" class="font-serif text-base tabular-nums">Rp 276.000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kartu Visual Kemasan Kraft LoopIn (Otomatis cek Stock Image.jpg / fallback) -->
+        <div class="bg-white rounded-3xl border border-taupe shadow-sm overflow-hidden">
+          <div class="p-5 sm:p-6 flex items-center gap-4">
+            <div class="w-24 h-24 rounded-2xl bg-oatmeal border border-taupe overflow-hidden shrink-0 flex items-center justify-center">
+              <img
+                src="assets/images/branding/hero-banner.png"
+                data-fallbacks="assets/images/branding/hero-banner.png"
+                alt="Kemasan Boks Kraft LoopIn"
+                class="w-full h-full object-cover"
+                onerror="tryNextImageSource(this)"
+              />
+            </div>
+            <div class="space-y-1">
+              <span class="inline-block px-2.5 py-0.5 rounded-full bg-sage-light text-sage-dark text-[10px] font-semibold">100% Plastic-Free Box</span>
+              <h3 class="font-serif text-base font-bold text-charcoal">Standar Kemasan Sirkular</h3>
+              <p class="text-xs text-charcoal-muted leading-relaxed">
+                Setiap pakaian telah melalui proses <em>steam-sanitizing</em>, disegel dengan kertas kraft daur ulang dan <em>hangtag</em> benih tanaman.
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- MODAL EDIT PROFIL & ALAMAT -->
+  <div id="edit-profile-modal" class="hidden fixed inset-0 z-50 bg-charcoal/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-taupe shadow-2xl max-w-md w-full overflow-hidden">
+      <div class="bg-sage px-6 py-4 text-white flex items-center justify-between">
+        <h3 class="font-serif text-lg font-bold">Edit Profil &amp; Alamat</h3>
+        <button onclick="closeEditProfileModal()" class="text-white/80 hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <form onsubmit="saveProfileChanges(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-charcoal mb-1">Nama Lengkap</label>
+          <input type="text" id="input-edit-name" required class="w-full px-3.5 py-2.5 text-sm bg-oatmeal border border-taupe rounded-xl focus:outline-none focus:border-sage" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-charcoal mb-1">Bio Singkat</label>
+          <textarea id="input-edit-bio" rows="2" class="w-full px-3.5 py-2 text-sm bg-oatmeal border border-taupe rounded-xl focus:outline-none focus:border-sage"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-charcoal mb-1">Alamat Pengiriman Utama</label>
+          <textarea id="input-edit-address" rows="2" required class="w-full px-3.5 py-2 text-sm bg-oatmeal border border-taupe rounded-xl focus:outline-none focus:border-sage"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-charcoal mb-1">No. WhatsApp</label>
+            <input type="text" id="input-edit-phone" required class="w-full px-3.5 py-2 text-sm bg-oatmeal border border-taupe rounded-xl focus:outline-none focus:border-sage" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-charcoal mb-1">Email</label>
+            <input type="email" id="input-edit-email" required class="w-full px-3.5 py-2 text-sm bg-oatmeal border border-taupe rounded-xl focus:outline-none focus:border-sage" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeEditProfileModal()" class="px-4 py-2 text-xs font-semibold text-charcoal bg-oatmeal hover:bg-taupe/70 rounded-xl transition-colors">Batal</button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-charcoal hover:bg-charcoal-hover rounded-xl shadow-sm transition-colors">Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- FOOTER (Seragam dengan auth.html & Landing Page) -->
+  <footer class="bg-charcoal text-white/70 py-6 border-t border-charcoal-muted/20 mt-12">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs space-y-2">
+      <p>&copy; 2026 LoopIn Platform. Give it another loop.</p>
+      <div class="flex justify-center gap-4 text-white/50 text-[11px]">
+        <a href="index.html" class="hover:text-white transition-colors">Beranda</a>
+        <span>•</span>
+        <a href="index.html#katalog" class="hover:text-white transition-colors">Katalog Preloved</a>
+        <span>•</span>
+        <a href="auth.html" class="hover:text-white transition-colors">Akun &amp; Keamanan</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript Terpisah -->
+  <script src="assets/js/profile-tracking.js"></script>
+</body>
+</html>

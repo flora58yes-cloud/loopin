@@ -1,0 +1,312 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keranjang Belanja — LoopIn</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage: { DEFAULT: '#7A8E78', hover: '#687A66', light: '#EBF0EA' },
+            charcoal: { DEFAULT: '#232822', hover: '#191D18', muted: '#5C625A' },
+            oatmeal: '#F7F5F0',
+            taupe: '#E5E0D8',
+            amber: { DEFAULT: '#D4A373', hover: '#C29161' }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .toast-slide { 
+      animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%) translateX(-50%); opacity: 0; }
+      to { transform: translateY(0) translateX(-50%); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-oatmeal text-charcoal font-sans min-h-screen flex flex-col justify-between antialiased selection:bg-sage selection:text-white">
+
+  <!-- AUTH GUARD -->
+  <script>
+    (function() {
+      const user = JSON.parse(localStorage.getItem('loopin_user') || 'null');
+      if (!user) window.location.href = 'auth.html?redirect=cart.html';
+    })();
+  </script>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-sm px-4"></div>
+
+  <!-- HEADER UTAMA -->
+  <header class="bg-sage text-white sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <div class="flex items-center gap-3">
+          <a href="index.html#katalog" class="p-1.5 text-white hover:opacity-80 transition-opacity flex items-center justify-center" aria-label="Kembali ke Katalog">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </a>
+
+          <a href="index.html" class="flex items-center gap-2 group">
+            <img src="assets/images/branding/logo.png" alt="LoopIn Logo" class="h-8 w-auto brightness-0 invert">
+            <span class="font-serif text-2xl font-bold tracking-tight block leading-none">LoopIn</span>
+          </a>
+        </div>
+
+        <div class="text-xs sm:text-sm text-white/90">
+          <span class="hidden sm:inline">Beranda / </span><span class="font-semibold underline">Keranjang Saya</span>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CART CONTENT -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <h1 class="font-serif text-3xl font-bold tracking-tight text-charcoal mb-8">Keranjang Belanja Kamu</h1>
+
+    <div id="cart-wrapper" class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      
+      <!-- Left: Dynamic Cart Items List -->
+      <div class="lg:col-span-2 space-y-4" id="cart-items-container">
+        <!-- Javascript renders items dynamically -->
+      </div>
+
+      <!-- Right: Summary Card -->
+      <div class="bg-white p-6 rounded-3xl border border-taupe shadow-md space-y-6 lg:sticky lg:top-28">
+        <h2 class="font-serif text-xl font-bold text-charcoal pb-4 border-b border-taupe">Ringkasan Belanja</h2>
+
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between text-charcoal/80">
+            <span>Total Harga Barang</span>
+            <span id="summary-subtotal" class="font-semibold text-charcoal">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-charcoal/80">
+            <span>Estimasi Ongkir</span>
+            <span class="font-semibold text-charcoal">Rp 12.000</span>
+          </div>
+          <div id="discount-row" class="flex justify-between text-sage font-medium hidden">
+            <span>Diskon Voucher</span>
+            <span id="summary-discount">-Rp 10.000</span>
+          </div>
+        </div>
+
+        <!-- Voucher Input -->
+        <div class="pt-2">
+          <label for="promo-code" class="block text-xs font-semibold text-charcoal mb-1.5">Punya Kode Promo?</label>
+          <div class="flex gap-2">
+            <input type="text" id="promo-code" placeholder="Cth: LOOPINSUSTAINABLE" class="flex-1 px-3.5 py-2 text-xs bg-oatmeal border border-taupe rounded-xl focus:outline-none focus:border-sage uppercase">
+            <button onclick="applyVoucher()" class="px-4 py-2 bg-charcoal hover:bg-charcoal-hover text-white text-xs font-semibold rounded-xl transition-all">Gunakan</button>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-taupe flex justify-between items-center">
+          <span class="font-serif font-bold text-lg text-charcoal">Total Pembayaran</span>
+          <span id="summary-total" class="font-serif font-bold text-xl text-sage">Rp 0</span>
+        </div>
+
+        <button onclick="proceedCheckout()" class="w-full py-3.5 bg-amber hover:bg-amber-hover text-white font-semibold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
+          <span>Lanjut ke Pembayaran</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+
+        <p class="text-[11px] text-charcoal-muted text-center leading-relaxed">
+          🔒 Transaksi aman & terverifikasi. Mendukung gerakan fashion berkelanjutan LoopIn.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-cart" class="hidden text-center py-20 space-y-4">
+      <div class="w-20 h-20 bg-sage-light text-sage rounded-full flex items-center justify-center mx-auto">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <h2 class="font-serif text-2xl font-bold text-charcoal">Keranjang Belanja Kamu Kosong</h2>
+      <p class="text-sm text-charcoal-muted max-w-sm mx-auto">Belum ada item preloved pilihan yang dimasukkan ke keranjang. Yuk temukan gaya berkelanjutanmu!</p>
+      <a href="index.html#katalog" class="inline-block mt-4 px-6 py-3 bg-sage hover:bg-sage-hover text-white text-sm font-semibold rounded-xl transition-all shadow-md">
+        Mulai Belanja Sekarang
+      </a>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-charcoal text-white/70 py-6 border-t border-charcoal-muted/20">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs space-y-2">
+      <p>&copy; 2026 LoopIn Platform. Give it another loop.</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    let discountAmount = 0;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      renderCart();
+    });
+
+    function getCart() {
+      return JSON.parse(localStorage.getItem('loopin_cart')) || [];
+    }
+
+    function saveCart(cart) {
+      localStorage.setItem('loopin_cart', JSON.stringify(cart));
+    }
+
+    function renderCart() {
+      const cart = getCart();
+      const container = document.getElementById('cart-items-container');
+      const cartWrapper = document.getElementById('cart-wrapper');
+      const emptyCart = document.getElementById('empty-cart');
+
+      if (cart.length === 0) {
+        cartWrapper.classList.add('hidden');
+        emptyCart.classList.remove('hidden');
+        return;
+      }
+
+      cartWrapper.classList.remove('hidden');
+      emptyCart.classList.add('hidden');
+      container.innerHTML = '';
+
+      cart.forEach((item, index) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = "cart-item bg-white p-4 sm:p-5 rounded-2xl border border-taupe shadow-sm flex gap-4 items-center transition-all";
+        itemEl.innerHTML = `
+          <img src="${item.image}" alt="${item.title}" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-taupe shrink-0">
+          
+          <div class="flex-1 min-w-0">
+            <h3 class="font-serif font-bold text-base sm:text-lg text-charcoal truncate">${item.title}</h3>
+            <p class="text-xs text-charcoal-muted mt-0.5">Ukuran: ${item.size} &bull; Kondisi: ${item.condition}</p>
+            <p class="text-xs text-sage font-medium mt-1">${item.seller || 'lovedbythia • Kota Surabaya'}</p>
+            <p class="font-semibold text-sage mt-2 text-sm sm:text-base">Rp ${item.price.toLocaleString('id-ID')}</p>
+          </div>
+
+          <div class="flex flex-col items-end justify-between h-full gap-4">
+            <button onclick="removeItem(${index})" class="text-charcoal-muted hover:text-rose-600 transition-colors" title="Hapus item">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+
+            <!-- Status Stok (Tanpa tulisan preloved, cukup "Stok: 1") -->
+            <div class="flex items-center">
+              <span class="text-xs font-semibold px-3 py-1.5 bg-oatmeal border border-taupe rounded-xl text-charcoal-muted">
+                Stok: 1
+              </span>
+            </div>
+          </div>
+        `;
+        container.appendChild(itemEl);
+      });
+
+      calculateTotals();
+    }
+
+    function removeItem(index) {
+      let cart = getCart();
+      cart.splice(index, 1);
+      saveCart(cart);
+      renderCart();
+      showToast('Item berhasil dihapus dari keranjang.', 'info');
+    }
+
+    function calculateTotals() {
+      const cart = getCart();
+      let subtotal = 0;
+      cart.forEach(item => { subtotal += item.price * (item.qty || 1); });
+
+      const shipping = cart.length > 0 ? 12000 : 0;
+      let total = subtotal + shipping - discountAmount;
+      if (total < 0) total = 0;
+
+      document.getElementById('summary-subtotal').textContent = `Rp ${subtotal.toLocaleString('id-ID')}`;
+      document.getElementById('summary-total').textContent = `Rp ${total.toLocaleString('id-ID')}`;
+    }
+
+    function applyVoucher() {
+      const code = document.getElementById('promo-code').value.trim().toUpperCase();
+      const discountRow = document.getElementById('discount-row');
+      const summaryDiscount = document.getElementById('summary-discount');
+
+      if (code === 'LOOPINSUSTAINABLE') {
+        discountAmount = 10000;
+        discountRow.classList.remove('hidden');
+        summaryDiscount.textContent = `-Rp 10.000`;
+        calculateTotals();
+        showToast('Voucher berhasil digunakan! Potongan Rp 10.000.', 'success');
+      } else {
+        showToast('Kode voucher tidak valid atau kedaluwarsa.', 'error');
+      }
+    }
+
+    async function proceedCheckout() {
+      showToast('Memproses pesanan ke database...', 'success');
+      const cart = JSON.parse(localStorage.getItem('loopin_cart')) || [];
+      const subtotal = cart.reduce((sum, item) => sum + (item.price * (item.qty || 1)), 0);
+
+      try {
+        const apiUrl = (window.location.port === '5000' || window.location.origin.includes('localhost:5000'))
+          ? '/api/orders'
+          : 'http://localhost:5000/api/orders';
+
+        await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: 1,
+            courier: 'SiCepat Green Eco',
+            subtotal: subtotal,
+            shippingCost: 10000,
+            items: cart
+          })
+        });
+      } catch (e) {
+        // Fallback jika backend tidak aktif
+      }
+
+      setTimeout(() => {
+        localStorage.removeItem('loopin_cart');
+        alert('Pesanan berhasil dibuat! Anda dapat melacak status pengiriman paket di halaman Lacak Pesanan.');
+        window.location.href = 'tracking.html';
+      }, 1200);
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      let bgColor = 'bg-charcoal text-white';
+      if (type === 'success') bgColor = 'bg-sage text-white';
+      if (type === 'error') bgColor = 'bg-rose-700 text-white';
+      if (type === 'info') bgColor = 'bg-amber text-white';
+
+      toast.className = `${bgColor} px-4 py-3 rounded-2xl shadow-xl text-xs font-medium flex items-center justify-between gap-3 pointer-events-auto border border-white/20 mb-2 toast-slide`;
+      toast.innerHTML = `<span>${message}</span><button onclick="this.parentElement.remove()" class="opacity-70 hover:opacity-100">&times;</button>`;
+
+      container.appendChild(toast);
+      setTimeout(() => { if (toast.parentElement) toast.remove(); }, 3500);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+/* ==========================================================================
+   LoopIn Design System — Custom Stylesheet (style.css)
+   Seragam dengan auth.html & Landing Page LoopIn
+   ========================================================================== */
+
+:root {
+  --loopin-sage: #7A8E78;
+  --loopin-sage-hover: #687A66;
+  --loopin-sage-light: #EBF0EA;
+  --loopin-sage-dark: #3F4F3E;
+  --loopin-charcoal: #232822;
+  --loopin-oatmeal: #F7F5F0;
+  --loopin-taupe: #E5E0D8;
+  --loopin-amber: #D4A373;
+}
+
+/* Smooth Scroll & Base Rendering */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--loopin-oatmeal);
+  color: var(--loopin-charcoal);
+}
+
+/* Toast Slide Animation (Konsisten dengan auth.html) */
+.toast-slide {
+  animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Efek Hover Kartu Produk & Transisi Gambar */
+.loopin-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+}
+
+.loopin-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--loopin-sage);
+  box-shadow: 0 12px 24px -10px rgba(35, 40, 34, 0.12);
+}
+
+/* Animasi Tombol Hati (Favorite / Like) */
+.heart-btn {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s ease;
+}
+
+.heart-btn:active {
+  transform: scale(0.85);
+}
+
+.heart-pop {
+  animation: heartPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+/* Custom Scrollbar Lembut */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--loopin-oatmeal);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CFC9BE;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--loopin-sage);
+}

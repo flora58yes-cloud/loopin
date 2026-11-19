@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lacak Pesanan — LoopIn</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage:     { DEFAULT: '#7A8E78', hover: '#687A66', light: '#EBF0EA' },
+            charcoal: { DEFAULT: '#232822', hover: '#191D18', muted: '#5C625A' },
+            oatmeal:  '#F7F5F0',
+            taupe:    '#E5E0D8',
+            amber:    { DEFAULT: '#D4A373', hover: '#C29161' }
+          },
+          fontFamily: {
+            sans:  ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ---- Toast ---- */
+    .toast-slide {
+      animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-100%) translateX(-50%); opacity: 0; }
+      to   { transform: translateY(0)     translateX(-50%); opacity: 1; }
+    }
+
+    /* ---- Timeline ---- */
+    .tl-item { position: relative; padding-left: 2rem; padding-bottom: 1.5rem; }
+    .tl-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 0.44rem;
+      top: 1.1rem;
+      bottom: 0;
+      width: 2px;
+      background: #E5E0D8;
+    }
+    .tl-item.done::before  { background: #7A8E78; }
+    .tl-item.active::before { background: linear-gradient(to bottom, #7A8E78, #E5E0D8); }
+
+    .tl-dot {
+      position: absolute; left: 0; top: 0.2rem;
+      width: 0.9rem; height: 0.9rem;
+      border-radius: 9999px;
+      border: 2px solid #E5E0D8;
+      background: #F7F5F0;
+    }
+    .tl-item.done   .tl-dot { background: #7A8E78; border-color: #7A8E78; }
+    .tl-item.active .tl-dot {
+      background: #D4A373; border-color: #D4A373;
+      box-shadow: 0 0 0 4px rgba(212,163,115,0.25);
+    }
+
+    /* ---- Skeleton ---- */
+    @keyframes shimmer { 0%,100%{opacity:.45} 50%{opacity:.9} }
+    .skeleton { animation: shimmer 1.4s ease-in-out infinite; background: #E5E0D8; border-radius: 12px; }
+
+    /* ---- Status badge ---- */
+    .badge-process   { background: #FEF3C7; color: #92400E; }
+    .badge-shipped   { background: #EBF0EA; color: #3D5C3A; }
+    .badge-delivered { background: #D1FAE5; color: #065F46; }
+    .badge-cancelled { background: #FEE2E2; color: #991B1B; }
+    .badge-default   { background: #E5E0D8; color: #5C625A; }
+  </style>
+</head>
+
+<body class="bg-oatmeal text-charcoal font-sans min-h-screen flex flex-col justify-between antialiased selection:bg-sage selection:text-white">
+
+  <!-- ===== AUTH GUARD ===== -->
+  <script>
+    (function() {
+      var u = JSON.parse(localStorage.getItem('loopin_user') || 'null');
+      if (!u) window.location.href = 'auth.html?redirect=tracking.html';
+    })();
+  </script>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-sm px-4"></div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="bg-sage text-white sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+
+        <!-- Brand + Back -->
+        <div class="flex items-center gap-3">
+          <a href="index.html#katalog" class="p-1.5 text-white hover:opacity-80 transition-opacity flex items-center justify-center" aria-label="Kembali ke Katalog">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </a>
+          <a href="index.html" class="flex items-center gap-2 group">
+            <img src="assets/images/branding/logo.png" alt="LoopIn Logo" class="h-8 w-auto brightness-0 invert">
+            <span class="font-serif text-2xl font-bold tracking-tight leading-none">LoopIn</span>
+          </a>
+        </div>
+
+        <!-- Breadcrumb + user -->
+        <div class="flex items-center gap-4">
+          <span class="text-xs sm:text-sm text-white/90">
+            <span class="hidden sm:inline">Beranda / </span><span class="font-semibold underline underline-offset-2">Lacak Pesanan</span>
+          </span>
+          <div class="hidden sm:flex items-center gap-3 border-l border-white/20 pl-4">
+            <span id="header-username" class="text-xs text-white/85 font-medium"></span>
+            <button onclick="handleLogout()" class="text-xs text-amber hover:text-amber-hover font-semibold transition-colors">Keluar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+
+    <!-- Page heading -->
+    <div class="mb-8">
+      <h1 class="font-serif text-3xl font-bold tracking-tight text-charcoal">Lacak Pesanan Kamu</h1>
+      <p class="text-sm text-charcoal-muted mt-1">Pantau status pengiriman & riwayat belanja di sini.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+      <!-- ========== LEFT: RESI TRACKER ========== -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Search resi card -->
+        <div class="bg-white rounded-3xl border border-taupe shadow-md p-6 sm:p-8">
+          <h2 class="font-serif text-xl font-bold text-charcoal mb-1">Lacak Nomor Resi</h2>
+          <p class="text-xs text-charcoal-muted mb-5">Masukkan nomor resi untuk melihat status pengiriman paket kamu.</p>
+
+          <div class="flex gap-3">
+            <input
+              id="resi-input"
+              type="text"
+              placeholder="Contoh: LP-2024-001"
+              class="flex-1 px-4 py-3 text-sm bg-oatmeal border border-taupe rounded-2xl focus:outline-none focus:border-sage focus:ring-1 focus:ring-sage transition-all text-charcoal placeholder:text-charcoal-muted"
+              onkeydown="if(event.key==='Enter') trackPackage()"
+            >
+            <button
+              onclick="trackPackage()"
+              class="px-6 py-3 bg-sage hover:bg-sage-hover text-white font-semibold text-sm rounded-2xl transition-all whitespace-nowrap shadow-sm"
+            >
+              Lacak →
+            </button>
+          </div>
+
+          <!-- Track result -->
+          <div id="track-result" class="mt-6 hidden"></div>
+        </div>
+
+        <!-- Orders list card -->
+        <div class="bg-white rounded-3xl border border-taupe shadow-md p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h2 class="font-serif text-xl font-bold text-charcoal">Pesanan Saya</h2>
+              <p class="text-xs text-charcoal-muted mt-0.5">Semua riwayat transaksi kamu di LoopIn.</p>
+            </div>
+            <button onclick="loadOrders()" class="text-xs text-sage hover:text-sage-hover font-semibold transition-colors flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Refresh
+            </button>
+          </div>
+          <div id="orders-container">
+            <!-- skeleton -->
+            <div class="space-y-3">
+              <div class="skeleton h-24 w-full"></div>
+              <div class="skeleton h-24 w-full"></div>
+              <div class="skeleton h-24 w-full" style="opacity:.6"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========== RIGHT: INFO SIDEBAR ========== -->
+      <div class="space-y-5 lg:sticky lg:top-28">
+
+        <!-- User info card -->
+        <div class="bg-white rounded-3xl border border-taupe shadow-md p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-sage rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0" id="avatar-initials">?</div>
+            <div>
+              <p class="font-semibold text-charcoal text-sm" id="sidebar-name">—</p>
+              <p class="text-xs text-charcoal-muted" id="sidebar-email">—</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center">
+            <div class="bg-oatmeal rounded-2xl py-3 px-2">
+              <p class="font-serif font-bold text-xl text-sage" id="stat-orders">—</p>
+              <p class="text-[11px] text-charcoal-muted mt-0.5">Pesanan</p>
+            </div>
+            <div class="bg-oatmeal rounded-2xl py-3 px-2">
+              <p class="font-serif font-bold text-xl text-amber" id="stat-active">—</p>
+              <p class="text-[11px] text-charcoal-muted mt-0.5">Aktif</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick links -->
+        <div class="bg-white rounded-3xl border border-taupe shadow-md p-6 space-y-2">
+          <p class="text-xs font-semibold text-charcoal-muted uppercase tracking-wide mb-3">Menu Cepat</p>
+          <a href="index.html#katalog" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-oatmeal transition-colors group">
+            <span class="w-8 h-8 bg-sage-light rounded-xl flex items-center justify-center text-sage">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </span>
+            <span class="text-sm font-medium text-charcoal group-hover:text-sage transition-colors">Katalog</span>
+          </a>
+          <a href="cart.html" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-oatmeal transition-colors group">
+            <span class="w-8 h-8 bg-amber/10 rounded-xl flex items-center justify-center text-amber">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </span>
+            <span class="text-sm font-medium text-charcoal group-hover:text-amber transition-colors">Keranjang</span>
+          </a>
+          <a href="profile-tracking.html" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-oatmeal transition-colors group">
+            <span class="w-8 h-8 bg-taupe rounded-xl flex items-center justify-center text-charcoal-muted">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <span class="text-sm font-medium text-charcoal group-hover:text-charcoal-muted transition-colors">Profil Saya</span>
+          </a>
+          <button onclick="handleLogout()" class="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-red-50 transition-colors group text-left">
+            <span class="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center text-red-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </span>
+            <span class="text-sm font-medium text-red-400 group-hover:text-red-500 transition-colors">Keluar</span>
+          </button>
+        </div>
+
+        <!-- Eco note -->
+        <div class="bg-sage-light rounded-3xl border border-sage/20 p-5">
+          <p class="text-xs font-semibold text-sage mb-1">🌱 Jejak Hijau Kamu</p>
+          <p class="text-xs text-charcoal-muted leading-relaxed">Setiap pembelian preloved di LoopIn membantu mengurangi limbah tekstil. Terima kasih sudah berbelanja secara berkelanjutan!</p>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="bg-charcoal text-white/70 py-6 border-t border-charcoal-muted/20">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs space-y-2">
+      <p>© 2026 LoopIn Platform. Give it another loop.</p>
+    </div>
+  </footer>
+
+  <!-- ===== SCRIPT ===== -->
+  <script>
+    // ── Config ──────────────────────────────────────────────
+    const BASE_API = (window.location.port === '5000' || window.location.hostname === 'localhost')
+      ? '/api'
+      : 'http://localhost:5000/api';
+
+    let currentUser = null;
+    let allOrders   = [];
+
+    // ── Init ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUser = JSON.parse(localStorage.getItem('loopin_user') || 'null');
+      if (!currentUser) return;
+
+      // Header greeting
+      const nameEl = document.getElementById('header-username');
+      if (nameEl) nameEl.textContent = 'Hi, ' + (currentUser.name || currentUser.username || 'Kamu');
+
+      // Sidebar
+      const name = currentUser.name || currentUser.username || 'Pengguna';
+      document.getElementById('sidebar-name').textContent  = name;
+      document.getElementById('sidebar-email').textContent = currentUser.email || '—';
+      document.getElementById('avatar-initials').textContent = name.charAt(0).toUpperCase();
+
+      // Auto-fill resi from URL ?resi=
+      const resiParam = new URLSearchParams(window.location.search).get('resi');
+      if (resiParam) {
+        document.getElementById('resi-input').value = resiParam;
+        trackPackage();
+      }
+
+      loadOrders();
+    });
+
+    // ── Logout ───────────────────────────────────────────────
+    function handleLogout() {
+      localStorage.removeItem('loopin_user');
+      localStorage.removeItem('loopin_cart');
+      showToast('Berhasil keluar. Sampai jumpa! 👋');
+      setTimeout(() => window.location.href = 'auth.html', 1300);
+    }
+
+    // ── Track by resi ─────────────────────────────────────────
+    async function trackPackage() {
+      const resi = document.getElementById('resi-input').value.trim();
+      if (!resi) { showToast('Masukkan nomor resi terlebih dahulu.', 'warn'); return; }
+
+      const resultEl = document.getElementById('track-result');
+      resultEl.classList.remove('hidden');
+      resultEl.innerHTML = `
+        <div class="space-y-3 pt-5 border-t border-taupe">
+          <div class="skeleton h-5 w-1/3"></div>
+          <div class="skeleton h-4 w-1/4" style="opacity:.7"></div>
+          <div class="mt-4 space-y-5">
+            <div class="skeleton h-12 w-full"></div>
+            <div class="skeleton h-12 w-full" style="opacity:.7"></div>
+            <div class="skeleton h-12 w-full" style="opacity:.5"></div>
+          </div>
+        </div>`;
+
+      try {
+        const res = await fetch(`${BASE_API}/orders/track/${encodeURIComponent(resi)}`);
+        if (!res.ok) throw new Error('not found');
+        const json = await res.json();
+        renderTrackResult(json.data || json, resi);
+      } catch (e) {
+        const fallback = getOfflineTracking(resi);
+        fallback ? renderTrackResult(fallback, resi) : renderNotFound(resultEl);
+      }
+    }
+
+    function renderTrackResult(data, resi) {
+      const resultEl = document.getElementById('track-result');
+      const history  = data.history || data.tracking || [];
+      const lastTitle = history.length ? (history[history.length - 1].title || history[history.length - 1].status || '') : '';
+      const status    = data.status || lastTitle || 'Tidak diketahui';
+      const eta       = data.eta || data.estimatedDelivery || data.estimated_delivery || null;
+
+      const timelineHTML = history.length
+        ? history.map((h, i) => {
+            const isLast  = i === history.length - 1;
+            const cls     = isLast ? 'active' : 'done';
+            const dateStr = h.timestamp_str || h.date || h.updated_at || '';
+            const title   = h.title   || h.status      || h.description || '';
+            const subDesc = h.title   ? (h.description || '') : '';
+            return `
+              <li class="tl-item ${cls}">
+                <span class="tl-dot"></span>
+                <p class="text-sm font-semibold text-charcoal leading-tight">${esc(title)}</p>
+                ${h.location ? `<p class="text-xs text-charcoal-muted mt-0.5">📍 ${esc(h.location)}</p>` : ''}
+                ${subDesc    ? `<p class="text-xs text-charcoal-muted mt-0.5">${esc(subDesc)}</p>`        : ''}
+                ${dateStr    ? `<p class="text-xs text-taupe mt-1">${esc(fmtDate(dateStr))}</p>`          : ''}
+              </li>`;
+          }).join('')
+        : `<li class="text-sm text-charcoal-muted">Belum ada riwayat pengiriman.</li>`;
+
+      resultEl.innerHTML = `
+        <div class="pt-5 border-t border-taupe">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div>
+              <p class="text-[11px] text-charcoal-muted uppercase tracking-widest mb-1">Nomor Resi</p>
+              <p class="font-serif font-bold text-lg text-charcoal">${esc(resi)}</p>
+            </div>
+            <span class="text-xs font-semibold px-3 py-1.5 rounded-full ${badgeClass(status)}">${esc(status)}</span>
+          </div>
+          ${eta ? `
+            <div class="flex items-center gap-2 bg-sage-light rounded-2xl px-4 py-3 mb-5 text-sm">
+              <svg class="w-4 h-4 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span class="text-charcoal-muted">Estimasi tiba:</span>
+              <span class="font-semibold text-charcoal">${esc(eta)}</span>
+            </div>` : ''}
+          <ul>${timelineHTML}</ul>
+        </div>`;
+    }
+
+    function renderNotFound(el) {
+      el.innerHTML = `
+        <div class="text-center py-10 border-t border-taupe">
+          <svg class="mx-auto mb-3 text-taupe" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <p class="font-semibold text-charcoal">Resi tidak ditemukan</p>
+          <p class="text-sm text-charcoal-muted mt-1">Pastikan nomor resi sudah benar atau coba lagi nanti.</p>
+        </div>`;
+    }
+
+    // ── Load Orders ───────────────────────────────────────────
+    async function loadOrders() {
+      const container = document.getElementById('orders-container');
+      if (!currentUser) return;
+
+      container.innerHTML = `
+        <div class="space-y-3">
+          <div class="skeleton h-24 w-full"></div>
+          <div class="skeleton h-24 w-full" style="opacity:.7"></div>
+        </div>`;
+
+      try {
+        const res = await fetch(`${BASE_API}/orders?userId=${currentUser.id || 1}`);
+        if (!res.ok) throw new Error('failed');
+        const json = await res.json();
+        const data = json.data || json;
+        allOrders = Array.isArray(data) ? data : (data.orders || []);
+        renderOrders(allOrders);
+      } catch (e) {
+        allOrders = getOfflineOrders();
+        renderOrders(allOrders);
+      }
+
+      // Update stats
+      const active = allOrders.filter(o => {
+        const s = (o.status || '').toLowerCase();
+        return !s.includes('terima') && !s.includes('selesai') && !s.includes('batal') && !s.includes('delivered');
+      }).length;
+      document.getElementById('stat-orders').textContent = allOrders.length;
+      document.getElementById('stat-active').textContent  = active;
+    }
+
+    function renderOrders(orders) {
+      const container = document.getElementById('orders-container');
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10">
+            <svg class="mx-auto mb-4 text-taupe" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            <p class="font-semibold text-charcoal">Belum ada pesanan</p>
+            <p class="text-sm text-charcoal-muted mt-1 mb-5">Yuk mulai belanja preloved favoritmu!</p>
+            <a href="index.html#katalog" class="inline-block bg-sage hover:bg-sage-hover text-white text-sm font-semibold px-6 py-3 rounded-2xl transition-all shadow-sm">Lihat Katalog</a>
+          </div>`;
+        return;
+      }
+      container.innerHTML = `<div class="space-y-3">${orders.map(renderOrderCard).join('')}</div>`;
+    }
+
+    function renderOrderCard(order) {
+      const resi   = order.resi_number || order.resi || order.tracking_number || null;
+      const status = order.status || 'Pending';
+      const date   = order.created_at ? fmtDate(order.created_at) : '—';
+      const total  = order.total_price != null ? fmtRupiah(order.total_price) : (order.total_payment != null ? fmtRupiah(order.total_payment) : '—');
+      const items  = order.items || order.order_items || [];
+      const itemNames = items.map(i => i.product_title || i.name || i.product_name || 'Preloved Item').join(', ');
+
+      return `
+        <div class="border border-taupe rounded-2xl p-4 hover:border-sage/40 hover:shadow-sm transition-all bg-oatmeal/60">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${badgeClass(status)}">${esc(status)}</span>
+                <span class="text-[11px] text-charcoal-muted">${esc(date)}</span>
+              </div>
+              <p class="text-sm font-semibold text-charcoal">Order #${esc(String(order.id || '—'))}</p>
+              ${itemNames ? `<p class="text-xs text-charcoal-muted mt-0.5 truncate max-w-xs">${esc(itemNames)}</p>` : ''}
+              ${resi ? `<p class="text-xs text-charcoal-muted mt-1">Resi: <span class="font-mono font-semibold text-charcoal">${esc(resi)}</span></p>` : ''}
+            </div>
+            <div class="text-right flex-shrink-0">
+              <p class="font-serif font-bold text-base text-charcoal">${total}</p>
+              ${resi ? `<button onclick="quickTrack('${esc(resi)}')" class="mt-1.5 text-xs text-sage hover:text-sage-hover font-semibold transition-colors">Lacak →</button>` : ''}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ── Quick track ───────────────────────────────────────────
+    function quickTrack(resi) {
+      document.getElementById('resi-input').value = resi;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(trackPackage, 350);
+    }
+
+    // ── Offline fallback ──────────────────────────────────────
+    function getOfflineTracking(resi) {
+      const db = {
+        'LP-2024-001': {
+          status: 'Dalam Pengiriman',
+          eta: 'Besok, 20 Nov 2026',
+          history: [
+            { status: 'Pesanan Berhasil Dibuat', description: 'Menunggu proses sortir & eco-packaging di LoopIn Hub.', date: '2024-01-10T08:00:00' },
+            { status: 'Paket Dikirimkan',        description: 'Paket dalam perjalanan ke kota tujuan.',               location: 'Jakarta Selatan', date: '2024-01-11T10:30:00' },
+            { status: 'Dalam Pengiriman',        description: 'Kurir sedang mengantar ke alamat kamu.',               location: 'Bandung',         date: '2024-01-12T09:00:00' }
+          ]
+        },
+        'LP-2024-002': {
+          status: 'Terkirim',
+          history: [
+            { status: 'Pesanan Dikonfirmasi', date: '2024-01-05T09:00:00' },
+            { status: 'Paket Dikirimkan',     location: 'Jakarta', date: '2024-01-06T14:00:00' },
+            { status: 'Paket Diterima',       location: 'Rumah Penerima', date: '2024-01-07T11:00:00' }
+          ]
+        }
+      };
+      return db[resi] || null;
+    }
+
+    function getOfflineOrders() {
+      return [
+        { id: 1, resi: 'LP-2024-001', status: 'Dalam Pengiriman', total_price: 185000, created_at: '2024-01-10', items: [{ product_title: 'Kemeja Flanel Thrift' }, { product_title: 'Jeans Denim Slim' }] },
+        { id: 2, resi: 'LP-2024-002', status: 'Terkirim',         total_price:  95000, created_at: '2024-01-05', items: [{ product_title: 'Blouse Vintage' }] }
+      ];
+    }
+
+    // ── Helpers ───────────────────────────────────────────────
+    function badgeClass(status) {
+      const s = (status || '').toLowerCase();
+      if (s.includes('kirim') || s.includes('transit') || s.includes('proses'))                        return 'badge-shipped';
+      if (s.includes('terima') || s.includes('selesai') || s.includes('delivered') || s.includes('tiba')) return 'badge-delivered';
+      if (s.includes('batal') || s.includes('cancel'))                                                 return 'badge-cancelled';
+      if (s.includes('pending') || s.includes('dibuat') || s.includes('konfirm'))                      return 'badge-process';
+      return 'badge-default';
+    }
+
+    function fmtDate(str) {
+      if (!str) return '';
+      try { return new Date(str).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); }
+      catch { return String(str); }
+    }
+
+    function fmtRupiah(n) {
+      return 'Rp ' + Number(n).toLocaleString('id-ID');
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showToast(msg, type) {
+      const c = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast-slide fixed top-5 left-1/2 text-sm px-5 py-3 rounded-2xl shadow-xl font-medium '
+        + (type === 'warn' ? 'bg-amber text-white' : 'bg-charcoal text-white');
+      el.style.cssText = 'transform:translateX(-50%)';
+      el.textContent = msg;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+  </script>
+
+</body>
+</html>

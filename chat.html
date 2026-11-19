@@ -1,0 +1,321 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Penjual — LoopIn</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <style>
+    /* Styling Tambahan Khusus Halaman Chat (Clean & Non-Generic) */
+    .chat-layout {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .chat-container {
+      background-color: var(--white);
+      border: 1px solid var(--neutral-taupe);
+      border-radius: 20px;
+      box-shadow: 0 4px 16px rgba(35, 40, 34, 0.04);
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+      overflow: hidden;
+    }
+
+    .chat-messages-area {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      background-color: rgba(234, 230, 223, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message-bubble {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .message-incoming {
+      background-color: var(--white);
+      color: var(--deep-charcoal);
+      border: 1px solid var(--neutral-taupe);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-outgoing {
+      background-color: var(--sage-ground);
+      color: var(--white);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-meta {
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      opacity: 0.8;
+      justify-content: flex-end;
+    }
+
+    .message-incoming .message-meta {
+      color: var(--deep-charcoal);
+      opacity: 0.6;
+    }
+
+    .product-preview-card {
+      background-color: var(--white);
+      border: 1px solid var(--neutral-taupe);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .product-preview-img {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid var(--neutral-taupe);
+    }
+  </style>
+</head>
+<body>
+  <!-- AUTH GUARD -->
+  <script>
+    (function() {
+      const user = JSON.parse(localStorage.getItem('loopin_user') || 'null');
+      if (!user) window.location.href = 'auth.html?redirect=chat.html';
+    })();
+  </script>
+
+  <!-- HEADER UTAMA -->
+  <header class="main-header">
+    <div class="container header-container">
+      <div class="brand-group">
+       <!-- Tombol Back kembali ke halaman sebelumnya -->
+<a href="javascript:history.back()" class="btn-header-back" aria-label="Kembali">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
+  </svg>
+</a>
+        <a href="index.html" class="brand-logo">
+          <img src="assets/images/branding/logo.png" alt="LoopIn Logo" class="header-logo-img">
+          <span class="header-brand-text">LoopIn Chat</span>
+        </a>
+      </div>
+      <div class="header-actions">
+        <span style="font-size: 13px; font-weight: 600; color: var(--white);" id="header-store-name">Penjual</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CHAT CONTAINER -->
+  <main style="padding: 40px 0 80px 0; background-color: var(--bg-warm-oat);">
+    <div class="container chat-layout">
+      
+      <!-- Kartu Informasi Produk yang Sedang Didiskusikan -->
+      <div class="product-preview-card">
+        <img id="chat-product-img" src="assets/images/catalog/1.jpg" alt="Produk" class="product-preview-img">
+        <div style="flex-grow: 1; min-width: 0;">
+          <span style="font-size: 11px; font-weight: 600; color: var(--sage-ground); text-transform: uppercase; letter-spacing: 0.5px;">Diskusi Produk</span>
+          <h3 id="chat-product-title" style="font-family: var(--font-heading); font-size: 16px; color: var(--deep-charcoal); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cream Knit Cardigan</h3>
+          <p id="chat-product-price" style="font-size: 14px; font-weight: 700; color: var(--deep-charcoal); margin-top: 2px;">Rp 35.000</p>
+        </div>
+        <a id="view-product-link" href="#" style="background-color: var(--sub-nav-bg); padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 600; color: var(--deep-charcoal); border: 1px solid var(--neutral-taupe); transition: background-color 0.2s ease;">
+          Lihat Detail
+        </a>
+      </div>
+
+      <!-- Kotak Utama Ruang Chat -->
+      <div class="chat-container">
+        
+        <!-- Header Profil Penjual -->
+        <div style="padding: 16px 20px; background-color: var(--white); border-bottom: 1px solid var(--neutral-taupe); display: flex; align-items: center; gap: 12px;">
+          <div id="seller-initials" style="width: 38px; height: 38px; border-radius: 50%; background-color: var(--sage-ground); color: var(--white); font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 13px;">DS</div>
+          <div>
+            <h2 id="chat-seller-name" style="font-size: 14px; font-weight: 700; color: var(--deep-charcoal);">DearThia Store</h2>
+            <p style="font-size: 11px; color: var(--deep-charcoal); opacity: 0.65; display: flex; align-items: center; gap: 6px; margin-top: 1px;">
+              <span style="width: 6px; height: 6px; background-color: #519E6A; border-radius: 50%; display: inline-block;"></span> Aktif &bull; Balas cepat
+            </p>
+          </div>
+        </div>
+
+        <!-- Area Pesan (Dinamis) -->
+        <div id="chat-messages" class="chat-messages-area">
+          <!-- Pesan Sambutan Otomatis dari Penjual -->
+          <div class="message-bubble message-incoming">
+            <p>Halo kak! Tertarik dengan produk <span id="msg-product-name" style="font-weight: 600;">Cream Knit Cardigan</span> ini? Stok masih tersedia dan siap dikirim. Ada yang ingin ditanyakan?</p>
+            <div class="message-meta">Baru saja</div>
+          </div>
+        </div>
+
+        <!-- Form Input & Tombol Kirim Pesan -->
+        <form id="chat-form" onsubmit="sendMessage(event)" style="padding: 16px; background-color: var(--white); border-top: 1px solid var(--neutral-taupe); display: flex; gap: 12px; align-items: center;">
+          <input type="text" id="chat-input" required placeholder="Tulis pesan untuk penjual..." 
+                 style="flex-grow: 1; padding: 10px 16px; background-color: var(--bg-warm-oat); border: 1px solid var(--neutral-taupe); border-radius: 20px; font-size: 13px; color: var(--deep-charcoal); outline: none; font-family: var(--font-body);">
+          <button type="submit" style="background-color: var(--amber-cheerful); color: var(--deep-charcoal); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: background-color 0.2s ease;">
+            Kirim
+          </button>
+        </form>
+
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-content">
+      <p>&copy; 2026 LoopIn Platform. Give it another loop.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Database 10 Produk LoopIn (Lengkap dengan info kondisi & deskripsi)
+    const productsData = {
+      "1": { name: "Cream Knit Cardigan", price: "Rp 35.000", store: "DearThia Store", img: "assets/images/catalog/1.jpg", condition: "Layak pakai", desc: "Cardigan rajut warna kream lembut dengan detail kancing depan." },
+      "2": { name: "Floral Off-Shoulder Top", price: "Rp 25.000", store: "Nabila Closet", img: "assets/images/catalog/2.jpg", condition: "Sangat baik", desc: "Atasan off-shoulder motif bunga manis dengan karet dada yang nyaman." },
+      "3": { name: "Textured Knit Sweater", price: "Rp 40.000", store: "Studio Preloved", img: "assets/images/catalog/3.jpg", condition: "Seperti baru", desc: "Sweater rajut bertekstur tebal dan hangat, belum pernah dipakai luar ruangan." },
+      "4": { name: "Chocolate Brown Blouse", price: "Rp 35.000", store: "DearThia Store", img: "assets/images/catalog/4.1.jpg", condition: "Sangat baik", desc: "Blus warna cokelat dengan potongan elegan dan bahan jatuh yang halus." },
+      "5": { name: "Patterned Blue Skirt", price: "Rp 40.000", store: "Loena Preloved Store", img: "assets/images/catalog/5.jpg", condition: "Layak pakai", desc: "Bawahan bermotif estetik dengan nuansa vintage yang nyaman dipadupadankan." },
+      "6": { name: "Olive Casual Top", price: "Rp 45.000", store: "Ayu Preloved", img: "assets/images/catalog/6.jpg", condition: "Sangat baik", desc: "Atasan kasual warna olive green dengan aksen kancing depan yang cantik." },
+      "7": { name: "Beige Utility Dress", price: "Rp 50.000", store: "Loena Preloved Store", img: "assets/images/catalog/7.jpg", condition: "Sangat baik", desc: "Gaun midi warna beige dengan potongan utility dan tali pinggang manis." },
+      "8": { name: "Vintage Floral Long Dress", price: "Rp 45.000", store: "Nabila Closet", img: "assets/images/catalog/8.jpg", condition: "Seperti baru", desc: "Dress panjang motif bunga bernuansa vintage, bahan jatuh dan sangat nyaman." },
+      "9": { name: "Classic Striped Shirt", price: "Rp 25.000", store: "Studio Preloved", img: "assets/images/catalog/9.jpg", condition: "Sangat baik", desc: "Kemeja garis klasik dengan detail jahitan rapi untuk kerja maupun kasual." },
+      "10": { name: "Plaid Oversized Flannel", price: "Rp 30.000", store: "Kenes Thrift", img: "assets/images/catalog/10.jpg", condition: "Layak pakai", desc: "Kemeja flanel motif kotak-kotak bergaya oversized, pas banget jadi outer." }
+    };
+
+    let currentProduct = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- SINKRONISASI PRODUK BERDASARKAN ID DI URL ---
+      const urlParams = new URLSearchParams(window.location.search);
+      const productId = urlParams.get('id');
+
+      if (productId && productsData[productId]) {
+        currentProduct = productsData[productId];
+        localStorage.setItem('loopin_active_chat_product', JSON.stringify(currentProduct));
+      } else {
+        currentProduct = JSON.parse(localStorage.getItem('loopin_active_chat_product')) || productsData["1"];
+      }
+
+      // Update elemen tampilan di chat.html menggunakan ID yang akurat
+      if (currentProduct) {
+        const titleEl = document.getElementById('chat-product-title');
+        const priceEl = document.getElementById('chat-product-price');
+        const imgEl = document.getElementById('chat-product-img');
+        const sellerNameEl = document.getElementById('chat-seller-name');
+        const headerStoreEl = document.getElementById('header-store-name');
+        const msgProductNameEl = document.getElementById('msg-product-name');
+        const viewLinkEl = document.getElementById('view-product-link');
+        const sellerInitialsEl = document.getElementById('seller-initials');
+
+        if (titleEl) titleEl.textContent = currentProduct.name;
+        if (priceEl) priceEl.textContent = currentProduct.price;
+        if (imgEl && currentProduct.img) imgEl.src = currentProduct.img;
+        if (sellerNameEl) sellerNameEl.textContent = currentProduct.store;
+        if (headerStoreEl) headerStoreEl.textContent = currentProduct.store;
+        if (msgProductNameEl) msgProductNameEl.textContent = currentProduct.name;
+        
+        if (sellerInitialsEl && currentProduct.store) {
+          sellerInitialsEl.textContent = currentProduct.store.substring(0, 2).toUpperCase();
+        }
+
+        if (viewLinkEl && productId) {
+          viewLinkEl.href = `product_detail.html?id=${productId}`;
+        }
+      }
+    });
+
+    // --- FUNGSI KIRIM PESAN DENGAN BALASAN NATURAL & SANTAI ---
+    function sendMessage(event) {
+      if (event) event.preventDefault();
+
+      const chatInput = document.getElementById('chat-input');
+      const chatMessages = document.getElementById('chat-messages');
+
+      if (!chatInput || !chatMessages) return;
+
+      const messageText = chatInput.value.trim();
+      if (messageText === '') return;
+
+      // 1. Tampilkan pesan dari pembeli (user)
+      const userBubble = document.createElement('div');
+      userBubble.className = 'message-bubble message-outgoing';
+      userBubble.innerHTML = `
+        <p>${escapeHTML(messageText)}</p>
+        <div class="message-meta">Baru saja</div>
+      `;
+      chatMessages.appendChild(userBubble);
+
+      chatInput.value = '';
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // Simpan percakapan ke database jika backend aktif
+      try {
+        const apiUrl = (window.location.port === '5000' || window.location.origin.includes('localhost:5000'))
+          ? `/api/chat/${productId}`
+          : `http://localhost:5000/api/chat/${productId}`;
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: messageText, senderName: 'Flora Jasmine' })
+        }).catch(() => {});
+      } catch (e) {}
+
+      // 2. Proses balasan santai setelah 1 detik
+      setTimeout(() => {
+        const lowerText = messageText.toLowerCase();
+        let replyText = `Halo kak! Ada lagi yg mau ditanyain soal ${currentProduct.name} ini?`;
+
+        // Cek Kata Kunci "kondisi"
+        if (lowerText.includes('kondisi')) {
+          replyText = `Oh iya kak, untuk kondisi ${currentProduct.name} ini masih ${currentProduct.condition.toLowerCase()} banget kok. ${currentProduct.desc} Dijamin aman dan siap pakai! ✨`;
+        } 
+        // Cek Kata Kunci "nego"
+        else if (lowerText.includes('nego') || lowerText.includes('kurang') || lowerText.includes('pas')) {
+          replyText = `Duh, harganya udah pas bgt sih kak di ${currentProduct.price} soalnya kondisinya emang masih bagus bgt. Maaf ya belum bisa nego lagi 🙏`;
+        } 
+        // Cek Kata Kunci "sudah pesan" / "pesan"
+        else if (lowerText.includes('sudah pesan') || lowerText.includes('pesan')) {
+          replyText = "Siap kak, pesanannya udah masuk ya. Langsung aku siapkan dan dipacking sekarang! 📦";
+        }
+
+        const sellerBubble = document.createElement('div');
+        sellerBubble.className = 'message-bubble message-incoming';
+        sellerBubble.innerHTML = `
+          <p>${escapeHTML(replyText)}</p>
+          <div class="message-meta">Baru saja</div>
+        `;
+        chatMessages.appendChild(sellerBubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, 1000);
+    }
+
+    // Fungsi pengaman XSS agar sendMessage berjalan normal
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag)
+      );
+    }
+</script>
